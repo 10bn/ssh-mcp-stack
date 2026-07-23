@@ -1,0 +1,6 @@
+.env
+config/ssh-config.json
+secrets/*
+!secrets/.gitkeep
+*.log
+node_modules/

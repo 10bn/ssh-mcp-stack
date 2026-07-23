@@ -1,0 +1,11 @@
+[
+  {
+    "name": "prod",
+    "host": "203.0.113.10",
+    "port": 22,
+    "username": "deploy",
+    "privateKey": "/secrets/id_ed25519",
+    "commandWhitelist": ["^ls( .*)?", "^cat .*", "^df.*", "^systemctl status .*"],
+    "allowedRemotePaths": ["/var/www", "/var/log"]
+  }
+]

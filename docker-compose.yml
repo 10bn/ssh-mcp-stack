@@ -1,0 +1,56 @@
+services:
+  mcp-bridge:
+    build: ./docker/mcp-bridge
+    container_name: ssh-mcp-bridge
+    restart: unless-stopped
+    environment:
+      MCP_BEARER_TOKEN: ${MCP_BEARER_TOKEN:?Set MCP_BEARER_TOKEN in .env}
+      OUTPUT_TRANSPORT: ${MCP_OUTPUT_TRANSPORT:-sse}
+      SSH_CONFIG_FILE: /config/ssh-config.json
+      PORT: 8000
+      INTERNAL_PORT: 8001
+    volumes:
+      - ./config/ssh-config.json:/config/ssh-config.json:ro
+      - ./secrets:/secrets:ro
+    expose:
+      - "8000"
+    networks:
+      - mcp-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8000/healthz',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ssh-mcp-cloudflared
+    restart: unless-stopped
+    depends_on:
+      mcp-bridge:
+        condition: service_healthy
+    networks:
+      - mcp-net
+    environment:
+      TUNNEL_MODE: ${TUNNEL_MODE:-quick}
+      CLOUDFLARE_TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        if [ "$$TUNNEL_MODE" = "named" ]; then
+          if [ -z "$$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+            echo "[cloudflared] TUNNEL_MODE=named but CLOUDFLARE_TUNNEL_TOKEN is empty" >&2
+            exit 1
+          fi
+          echo "[cloudflared] starting named tunnel (stable hostname)"
+          exec cloudflared tunnel --no-autoupdate run --token "$$CLOUDFLARE_TUNNEL_TOKEN"
+        else
+          echo "[cloudflared] starting quick tunnel (ephemeral *.trycloudflare.com URL)"
+          exec cloudflared tunnel --no-autoupdate --url http://mcp-bridge:8000
+        fi
+
+networks:
+  mcp-net:
+    driver: bridge

@@ -1,0 +1,12 @@
+{
+  "name": "ssh-mcp-bridge",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Auth-checking HTTP front for ssh-mcp-server exposed via supergateway",
+  "type": "commonjs",
+  "dependencies": {
+    "@fangjunjie/ssh-mcp-server": "1.8.5",
+    "supergateway": "3.4.3",
+    "http-proxy": "1.18.1"
+  }
+}
